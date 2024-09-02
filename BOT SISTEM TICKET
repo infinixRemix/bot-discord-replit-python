@@ -1,0 +1,46 @@
+import discord
+from discord.ext import commands
+import asyncio
+
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+
+bot = commands.Bot(command_prefix='!', intents=intents)
+
+ADMIN_ROLE_ID =   # pon el id del rol de admin
+TICKET_CATEGORY_ID =  # pon el id de la categoria de tickets
+NOTIFICATION_CHANNEL_ID =  # pon el id don se notifique el ticket creado
+
+@bot.command()
+async def ticketcreate(ctx):
+    # Verifica si el comando se usa en un servidor
+    if not ctx.guild:
+        return await ctx.send(embed=create_embed("Este comando solo puede usarse en un servidor."))
+
+    ticket_name = f"ticket-{ctx.author.name}-{ctx.author.discriminator}"
+
+    category = ctx.guild.get_channel(TICKET_CATEGORY_ID)
+    if not category:
+        return await ctx.send(embed=create_embed("No se pudo encontrar la categoría de tickets."))
+
+
+    overwrites = {
+        ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+        ctx.author: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+        ctx.guild.get_role(ADMIN_ROLE_ID): discord.PermissionOverwrite(read_messages=True, send_messages=True)
+    }
+
+    ticket_channel = await ctx.guild.create_text_channel(ticket_name, category=category, overwrites=overwrites)
+
+    await ticket_channel.send(embed=create_embed(f"Bienvenido {ctx.author.mention}. Los administradores te atenderán pronto."))
+
+    await ctx.send(embed=create_embed(f"Tu ticket ha sido creado en {ticket_channel.mention}"))
+
+    notification_channel = ctx.guild.get_channel(NOTIFICATION_CHANNEL_ID)
+    if notification_channel:
+        await notification_channel.send(embed=create_embed(f"{ctx.author.mention} ha creado un nuevo ticket en {ticket_channel.mention}"))
+    else:
+        print("No se pudo encontrar el canal de notificaciones.")
+
+bot.run('TOKEN BOT')
